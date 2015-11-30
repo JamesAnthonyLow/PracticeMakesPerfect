@@ -34,6 +34,9 @@ def freq_ary str
   end
   freq
 end
-puts benchmark {
-  puts is_perm ARGV[0].chomp, ARGV[1].chomp
-}
+##puts benchmark {
+## puts is_perm ARGV[0].chomp, ARGV[1].chomp
+##}
+
+#1.4
+
