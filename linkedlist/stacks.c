@@ -1,37 +1,39 @@
 #include <stdio.h>
 #include <stdlib.h>
-
-#define true 1
-#define false 0
-typedef int bool;
+#include <stdbool.h>
 
 typedef struct stack {
-  int data;
+  void * data;
   struct stack * next;
 } Node;
 
-void raise_exception_if_empty(struct stack * headRef);
-bool isEmpty(struct stack * headRef);
-int peek(struct stack * headRef);
-Node * pop(struct stack ** headRef);
-void push(struct stack ** headRef, int newData);
+void raise_exception_if_empty(Node * head);
+bool isEmpty(Node * head);
+int peek(Node * head);
+Node pop(Node * head);
+Node push(Node * head, int * newData);
 
 int main(){
-  Node * myStack = malloc(sizeof(Node));
-  myStack = NULL;
+  Node myStack;
 
-  push(&myStack, 3);
-  push(&myStack, 2);
-  push(&myStack, 1);
+  int n1 = 3;
+  int n2 = 2;
+  int n3 = 1;
+  myStack = push(&myStack, &n1);
+  myStack = push(&myStack, &n2);
+  myStack = push(&myStack, &n3);
 
   //just some demonstration of use
-  printf("Peeking... %d\n", peek(myStack));
-  printf("Popped: %d\n", pop(&myStack)->data);
-  printf("Empty?: %d\n", isEmpty(myStack));
-  printf("Popped: %d\n", pop(&myStack)->data);
-  printf("Peeking... %d\n", peek(myStack));
-  printf("Popped: %d\n", pop(&myStack)->data);
-  printf("Empty?: %d\n", isEmpty(myStack));
+  printf("Peeking... %d\n", peek(&myStack));
+  myStack = pop(&myStack);
+  printf("Popped: %d\n", *(int *)myStack.data);
+  printf("Empty?: %d\n", isEmpty(&myStack));
+  myStack = pop(&myStack);
+  printf("Popped: %d\n", *(int *)myStack.data);
+  printf("Peeking... %d\n", peek(&myStack));
+  myStack = pop(&myStack);
+  printf("Popped: %d\n", *(int *)myStack.data);
+  printf("Empty?: %d\n", isEmpty(&myStack));
 
   //either should raise error
   //peek(myStack);
@@ -40,32 +42,33 @@ int main(){
   exit(EXIT_SUCCESS);
 }
 
-void raise_exception_if_empty(struct stack * headRef){
-  if(isEmpty(headRef)) {
+void raise_exception_if_empty(Node * head){
+  if(isEmpty(head)) {
     fprintf(stderr, "Stack is empty! Aborting...\n");
     exit(EXIT_FAILURE);
   }
 }
 
-bool isEmpty(struct stack * headRef){
-  return !headRef;
+bool isEmpty(Node * head){
+  return !head;
 }
 
-int peek(struct stack * headRef){
-  raise_exception_if_empty(headRef);
-  return headRef->data; 
+int peek(Node * head){
+  raise_exception_if_empty(head);
+  int * data = head->data;
+  return *data; 
 }
 
-Node * pop(struct stack ** headRef){
-  raise_exception_if_empty(*headRef);
-  Node * top = *headRef;
-  *headRef = top->next;
-  return top;
+Node pop(Node * head){
+  raise_exception_if_empty(head);
+  Node top = *head;
+  return *top.next;
 }
 
-void push(struct stack ** headRef, int newData){
+Node push(Node * head, int * newData){
   Node * newNode = malloc(sizeof(Node));
+  raise_exception_if_empty(newNode);
   newNode->data = newData;
-  newNode->next = *headRef;
-  *headRef = newNode;
+  newNode->next = head;
+  return *newNode;
 }
