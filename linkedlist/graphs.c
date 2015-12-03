@@ -2,44 +2,53 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-typedef struct graph graphNode, *graphP;
-typedef struct edges edge, *edgePtr;
+typedef enum { UNDIRECTED, DIRECTED } GraphType;
+typedef struct edge Edge;
+typedef struct graph GraphNode;
 
 struct graph {
   int numOfNodes;
   int name;
-  bool visited;
-  edgePtr adjacents;
+  GraphType type;
+  Edge * adjacents;
 };
 
-struct edges {
-  graphNode * data;
-  struct edges * next;  
+struct edge {
+  GraphNode * data;
+  struct edge * next;  
 };
 
 void err(char * errorMessage);
 
-edgePtr createEdgePtr(graphNode * newData);
+Edge * createEdgePtr(GraphNode * newData);
 
-void addEdge(graphP graph, int from, int to);
+void addEdge(GraphNode * graph, int from, int to);
 
-graphP createGraph(int numOfNodes);
+void connectEdge(GraphNode * graph, int from, int to);
 
-graphNode createNode(int name);
+GraphNode * createGraph(int numOfNodes, GraphType type);
 
-void destroyGraph(graphP graph);
+GraphNode createNode(int name);
 
-void displayGraph(graphP graph);
+void destroyGraph(GraphNode * graph);
+
+void displayGraph(GraphNode * graph);
+
+void dfs(bool * visited, GraphNode root);
+
+bool hasRoute(GraphNode * graph, int from, int to);
 
 int main(){
-  graphP myGraph = createGraph(7);
+  GraphNode * myGraph = createGraph(7, UNDIRECTED);
+
   addEdge(myGraph, 0, 1);
   addEdge(myGraph, 0, 4);
   addEdge(myGraph, 2, 4);
   addEdge(myGraph, 4, 6);
-  addEdge(myGraph, 5, 6);
   addEdge(myGraph, 6, 5);
   addEdge(myGraph, 6, 3);
+
+  printf("Route between 4 and 2: %s\n", hasRoute(myGraph, 4, 2) ? "true" : "false");
 
   displayGraph(myGraph);
   destroyGraph(myGraph);
@@ -47,8 +56,48 @@ int main(){
   exit(EXIT_SUCCESS);
 }
 
-graphP createGraph(int numOfNodes){
-  graphP newGraph = malloc(numOfNodes * sizeof(graphNode));
+void dfs(bool * visited, GraphNode root){
+  Edge currEdge = *root.adjacents;
+  GraphNode currNode = root;
+
+  visited[root.name] = true;
+
+  while(true){
+    if(!currEdge.data)
+      break;
+
+    currNode = *currEdge.data;
+
+    if(!visited[currNode.name])
+      dfs(visited, currNode);
+
+    if(!currEdge.next)
+      break;
+
+    currEdge = *currEdge.next;
+  }  
+
+}
+
+bool hasRoute(GraphNode * graph, int node1, int node2){
+  bool visitedFrom1[graph->numOfNodes];
+  bool visitedFrom2[graph->numOfNodes];
+
+  for(int i=0; i < graph->numOfNodes; i++) {
+    visitedFrom1[i] = false;
+    visitedFrom2[i] = false;
+  }
+
+  dfs(visitedFrom1, graph[node1]);
+
+  if(graph->type == UNDIRECTED)
+    dfs(visitedFrom2, graph[node2]);
+
+  return visitedFrom1[node2] || visitedFrom2[node1];
+}
+
+GraphNode * createGraph(int numOfNodes, GraphType type){
+  GraphNode * newGraph = malloc(numOfNodes * sizeof(GraphNode));
 
   if(!newGraph) 
     err("Not enough memory to create graph! Aborting...\n");
@@ -58,22 +107,22 @@ graphP createGraph(int numOfNodes){
   }
 
   newGraph->numOfNodes = numOfNodes;
+  newGraph->type = type;
 
   return newGraph;
 }
 
-graphNode createNode(int name){
-  graphNode newNode;
+GraphNode createNode(int name){
+  GraphNode newNode;
 
   newNode.name = name;
-  newNode.visited = false;
-  newNode.adjacents = malloc(sizeof(edge));
+  newNode.adjacents = malloc(sizeof(Edge));
 
   return newNode;
 }
 
-edgePtr createEdgePtr(graphNode * newData){
-  edgePtr newEdge = malloc(sizeof(edge));
+Edge * createEdgePtr(GraphNode * newData){
+  Edge * newEdge = malloc(sizeof(Edge));
 
   if(!newEdge)
     err("Not enough memory for edge pointer. Aborting...\n");
@@ -83,51 +132,56 @@ edgePtr createEdgePtr(graphNode * newData){
   return newEdge;
 }
 
-void addEdge(graphP graph, int from, int to){
+void connectEdge(GraphNode * graph, int from, int to){
+  Edge * adjacents = graph[from].adjacents;
 
-  if(!graph[from].adjacents->data){
-    graph[from].adjacents = createEdgePtr(&graph[to]);
+  if(!adjacents->data){
+    adjacents = createEdgePtr(&graph[to]);
   } else {
-    edgePtr newEdge = createEdgePtr(&graph[to]);
-    newEdge->next = graph[from].adjacents;
-    graph[from].adjacents = newEdge;
+    Edge * newEdge = createEdgePtr(&graph[to]);
+    newEdge->next = adjacents;
+    adjacents = newEdge;
   }
+
+  graph[from].adjacents = adjacents;
+}
+
+void addEdge(GraphNode * graph, int from, int to){
+  connectEdge(graph, from, to);
+
+  if(graph->type == UNDIRECTED)
+    connectEdge(graph, to, from);
 
 }
 
-void destroyGraph(graphP graph){
-  edgePtr tmp1 = malloc(sizeof(edge));
-  edgePtr tmp2 = malloc(sizeof(edge));
-
-  if(!(tmp1 && tmp2))
-    err("Not enough memory for edge pointers, everyone run for the hills!\n");
+void destroyGraph(GraphNode * graph){
+  Edge tmpEdge;
 
   for(int i = 0; i < graph->numOfNodes; i++){
-    tmp1 = graph[i].adjacents->next;
+    tmpEdge = *graph[i].adjacents;
     free(graph[i].adjacents);
-    while(tmp1){
-     tmp2 = tmp1->next;
-     free(tmp1);
-     tmp1 = tmp2;
-     tmp2 = NULL;
+    while(tmpEdge.next){
+      tmpEdge = *tmpEdge.next;
+      free(tmpEdge.next);
     }
   }
 
-  free(tmp2);
   free(graph);
 }
 
-void displayGraph(graphP graph){
-  edge tmp;
+void displayGraph(GraphNode * graph){
+  Edge tmp;
 
   for(int i = 0; i < graph->numOfNodes; i++){
     printf("Node %d Edges: ", i);
     tmp = *graph[i].adjacents;
     for(;;){
 
-      if(tmp.data) printf("%d ", tmp.data->name);
+      if(tmp.data) 
+        printf("%d ", tmp.data->name);
 
-      if(tmp.next == NULL) break;
+      if(tmp.next == NULL) 
+        break;
 
       tmp = *tmp.next;
     }
