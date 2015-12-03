@@ -133,17 +133,12 @@ Edge * createEdgePtr(GraphNode * newData){
 }
 
 void connectEdge(GraphNode * graph, int from, int to){
-  Edge * adjacents = graph[from].adjacents;
+  Edge * newEdge = createEdgePtr(&graph[to]);
 
-  if(!adjacents->data){
-    adjacents = createEdgePtr(&graph[to]);
-  } else {
-    Edge * newEdge = createEdgePtr(&graph[to]);
-    newEdge->next = adjacents;
-    adjacents = newEdge;
-  }
-
-  graph[from].adjacents = adjacents;
+  if(graph[from].adjacents->data)
+    newEdge->next = graph[from].adjacents;
+  
+  graph[from].adjacents = newEdge;
 }
 
 void addEdge(GraphNode * graph, int from, int to){
@@ -175,7 +170,7 @@ void displayGraph(GraphNode * graph){
   for(int i = 0; i < graph->numOfNodes; i++){
     printf("Node %d Edges: ", i);
     tmp = *graph[i].adjacents;
-    for(;;){
+    while(true){
 
       if(tmp.data) 
         printf("%d ", tmp.data->name);
