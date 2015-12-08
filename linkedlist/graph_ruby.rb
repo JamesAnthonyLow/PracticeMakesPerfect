@@ -1,9 +1,15 @@
+def benchmark
+  b = Time.now
+  yield
+  a = Time.now
+  "#{a - b} ms"  
+end
 UNDIRECTED = true
 DIRECTED = false
 
 class Graph
   GraphNode = Struct.new(:name, :adjacents)
-  Edge = Struct.new(:data, :next)
+  Edge = Struct.new(:node, :next)
   def initialize args={}, name=-1
     @type = args[:type]
     @num_of_nodes = args[:num_of_nodes]
@@ -17,17 +23,36 @@ class Graph
     connect_edge to, from unless @type == DIRECTED
   end
   def has_route? from, to
-    visitedFromTo = dfs(@nodes[from])
-    visitedToFrom = @type == DIRECTED ? dfs(@nodes[to]) : []
-    visitedFromTo[to] || visitedToFrom[from]
+    visitedFromTo = bfs(@nodes[from])
+    visitedToFrom = @type == DIRECTED ? bfs(@nodes[to]) : []
+    !!(visitedFromTo[to] || visitedToFrom[from])
   end
   private
+  def bfs root, visited = Array.new(@num_of_nodes, false)
+    visited[root.name] = true
+    queue = []
+    queue.unshift root.adjacents
+    loop do
+      curr_edge = queue.pop
+      break unless curr_edge
+      curr_node = curr_edge.node
+      unless visited[curr_node.name]
+        visited[curr_node.name] = true
+        loop do
+          curr_edge = curr_edge.next
+          break unless curr_edge
+          queue.unshift curr_edge
+        end
+      end
+    end
+    visited
+  end
   def dfs root, visited = Array.new(@num_of_nodes, false)
     visited[root.name] = true
     curr_edge = root.adjacents
     loop do
       return visited unless curr_edge
-      curr_node = curr_edge.data
+      curr_node = curr_edge.node
       unless visited[curr_node.name]
         dfs(curr_node, visited)
       end
@@ -37,7 +62,7 @@ class Graph
   def edges_to_str adjacents, result = ""
     loop do
       return result unless adjacents
-      result << " #{adjacents.data.name} "
+      result << " #{adjacents.node.name} "
       adjacents = adjacents.next 
     end
   end
@@ -55,7 +80,7 @@ class Graph
   end
 end
 
-g  = Graph.new(:num_of_nodes => 7, :type => DIRECTED, :edges => [[0, 1],
+g  = Graph.new(:num_of_nodes => 7, :type => UNDIRECTED, :edges => [[0, 1],
                                                                    [0, 4],
                                                                    [2, 4],
                                                                    [4, 6],
@@ -63,4 +88,4 @@ g  = Graph.new(:num_of_nodes => 7, :type => DIRECTED, :edges => [[0, 1],
                                                                    [6, 3]])
 
 puts g
-puts g.has_route? 3, 6
+puts benchmark { p g.has_route? 0, 6}
